@@ -1,0 +1,98 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseArduino.h>
+#include <HX711.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#define max_wt 0
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+                           
+//4A:13:45:C9:71:9D:CF:A6:33:F1:F8:F0:1E:88:23:88:AC:D6:2A:02 fingerprint key
+
+#define FIREBASE_HOST "sih2022-22148-default-rtdb.firebaseio.com"  
+#define FIREBASE_AUTH "xRej64daQjOrExed5HwNY4nPlt9vB4MHn2Id1pgR"  
+#define WIFI_SSID "Suraj"
+#define WIFI_PASSWORD "surajjoshi272002july"                                   
+
+// data pin and clock pin
+byte pinData = 16;
+byte pinClk = 0;
+
+HX711 scale;
+
+float weight;
+float calibration_factor = -74626.00; // for me this vlaue works just perfect 419640
+ 
+void setup() 
+{
+  Serial.begin(115200);         
+  scale.set_scale();
+  scale.tare(); //Reset the scale to 0
+  
+  Wire.begin(D2, D1);
+//  lcd.begin();
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("HII");
+  lcd.setCursor(0,1);
+  lcd.print("Weighing Scale");
+  delay(1000);
+  lcd.clear();
+ 
+  lcd.print("Connecting Wifi");
+  scale.begin(pinData, pinClk); 
+  //apply the calibration
+//  scale.set_scale();
+//  //initializing the tare. 
+//  scale.tare();  //Reset the scale to 0
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);           
+  Serial.print("Connecting to ");
+  Serial.print(WIFI_SSID); 
+  while (WiFi.status() != WL_CONNECTED) {
+  Serial.print(".");
+  delay(500);
+  }
+  Serial.println();
+  Serial.print("Connected to ");
+  Serial.println(WIFI_SSID);
+  Serial.print("IP Address is : ");
+  Serial.println(WiFi.localIP());                
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);   
+  delay(1000);
+}
+
+void loop()
+{
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+ 
+  weight = scale.get_units(5); 
+  if(weight>0.5){
+    lcd.setCursor(0, 0);
+    lcd.print("Measured Weight");
+    lcd.setCursor(0, 1);
+    lcd.print(weight);
+    lcd.print(" KG  ");
+    delay(500);
+    lcd.clear();
+    
+    Serial.print("Weight: ");
+    Serial.print(weight);
+    Firebase.setInt("Trucks/weight",weight);
+    Serial.println(weight);
+    lcd.setCursor(0, 0);
+    lcd.print("Firebase done");
+    lcd.clear();
+    
+    if(max_wt<weight){
+      max_wt = weight;
+    }
+  
+    Serial.println(" KG");
+    Serial.println();
+  }
+  else{
+      Serial.print("NOTHING!");
+  }
+    
+}
