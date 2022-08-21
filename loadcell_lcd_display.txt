@@ -1,0 +1,83 @@
+#include <HX711.h>
+#include <ESP8266WiFi.h>;
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+ 
+const char *ssid = "Suraj"; // replace with your wifi ssid and wpa2 key
+const char *pass = "surajjoshi272002july";
+// data pin and clock pin
+byte pinData = 16;
+byte pinClk = 0;
+ 
+WiFiClient client;
+ 
+HX711 scale;
+ 
+
+float weight;
+float calibration_factor = -74626.00; // for me this vlaue works just perfect 419640
+ 
+void setup() 
+{
+  Serial.begin(115200);
+  
+  scale.set_scale();
+  scale.tare(); //Reset the scale to 0
+  
+  Wire.begin(D2, D1);
+//  lcd.begin();
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("HII");
+  lcd.setCursor(0,1);
+  lcd.print("Weighing Scale");
+  delay(1000);
+  lcd.clear();
+ 
+  lcd.print("Connecting Wifi");
+  scale.begin(pinData, pinClk); 
+  //apply the calibration
+  scale.set_scale();
+  //initializing the tare. 
+  scale.tare();  //Reset the scale to 0
+
+
+  
+  WiFi.begin(ssid, pass);
+  {
+  delay(500);
+  Serial.print(".");
+  lcd.clear();
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  lcd.clear();
+  lcd.print("WiFi connected");
+  
+  delay(1000);
+}
+ 
+void loop() 
+ 
+{
+ 
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+ 
+  weight = scale.get_units(5); 
+ 
+  lcd.setCursor(0, 0);
+  lcd.print("Measured Weight");
+  lcd.setCursor(0, 1);
+  lcd.print(weight);
+  lcd.print(" KG  ");
+  delay(500);
+  lcd.clear();
+  
+  Serial.print("Weight: ");
+  Serial.print(weight);
+  Serial.println(" KG");
+  Serial.println();
+ 
+}
